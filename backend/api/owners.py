@@ -64,15 +64,18 @@ def create_owner(
     db: Session = Depends(get_db)
 ):
     """Create a new owner"""
-    # Check if email already exists for the client
-    existing_owner = db.query(Owner).filter(Owner.email == owner.email).first()
-    if existing_owner:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
     # Set client_id from authenticated user if not provided (or if not admin)
     owner_data = owner.model_dump()
     if current_user.role != "admin" or not owner_data.get("client_id"):
         owner_data["client_id"] = current_user.client_id
+
+    # Check if email already exists for the same client
+    existing_owner = db.query(Owner).filter(
+        Owner.email == owner.email,
+        Owner.client_id == owner_data["client_id"]
+    ).first()
+    if existing_owner:
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     db_owner = Owner(**owner_data)
     db.add(db_owner)
@@ -99,10 +102,11 @@ def update_owner(
 
     update_data = owner_update.model_dump(exclude_unset=True)
 
-    # Check email uniqueness if updating email
-    if "email" in update_data:
+    # Check email uniqueness if updating email (scoped to same client)
+    if "email" in update_data and update_data["email"] != db_owner.email:
         existing_owner = db.query(Owner).filter(
             Owner.email == update_data["email"],
+            Owner.client_id == db_owner.client_id,
             Owner.owner_id != owner_id
         ).first()
         if existing_owner:

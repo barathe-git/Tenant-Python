@@ -138,10 +138,12 @@ def render_tenant_form():
         st.session_state['tenant_active_tab'] = "Manage Tenants"
 
     # Tab selection using radio (supports programmatic selection)
+    tab_options = ["Add Tenant", "Manage Tenants", "Generate Agreement"]
+    tab_index = tab_options.index(st.session_state['tenant_active_tab']) if st.session_state['tenant_active_tab'] in tab_options else 1
     selected_tab = st.radio(
         "Select Action",
-        ["Add Tenant", "Manage Tenants"],
-        index=0 if st.session_state['tenant_active_tab'] == "Add Tenant" else 1,
+        tab_options,
+        index=tab_index,
         horizontal=True,
         key="tenant_tab_selector",
         label_visibility="collapsed"
@@ -182,6 +184,8 @@ def render_tenant_form():
                 with col2:
                     email = st.text_input("Email", placeholder="Enter email address (optional)")
                     portion_number = st.text_input("Portion Number *", placeholder="e.g., A-101")
+
+                address = st.text_area("Permanent Address", placeholder="Enter tenant's permanent/native address")
 
                 # Rent breakdown fields
                 st.markdown("**Rent Details**")
@@ -226,6 +230,7 @@ def render_tenant_form():
                                 "name": name,
                                 "phone": phone,
                                 "email": email if email else None,
+                                "address": address if address else None,
                                 "portion_number": portion_number,
                                 "rent_amount": float(rent_amount),
                                 "water_charge": float(water_charge),
@@ -296,7 +301,7 @@ def render_tenant_form():
                         except Exception as e:
                             st.error(f"An error occurred: {str(e)}")
 
-    else:  # Manage Tenants tab
+    elif selected_tab == "Manage Tenants":
         st.subheader("Manage Tenants")
 
         # Search and filter
@@ -446,6 +451,8 @@ def render_tenant_form():
                                         edit_email = st.text_input("Email", value=tenant.get('email', '') or '', key=f"edit_temail_{tenant_id}")
                                         edit_aadhar = st.text_input("Aadhar", value=tenant.get('aadhar_number', '') or '', key=f"edit_taadhar_{tenant_id}")
 
+                                    edit_address = st.text_area("Permanent Address", value=tenant.get('address', '') or '', key=f"edit_taddress_{tenant_id}")
+
                                     st.markdown("**Rent Details**")
                                     col1, col2, col3, col4, col5 = st.columns(5)
                                     with col1:
@@ -480,6 +487,7 @@ def render_tenant_form():
                                                     "name": edit_name,
                                                     "phone": edit_phone,
                                                     "email": edit_email if edit_email else None,
+                                                    "address": edit_address if edit_address else None,
                                                     "portion_number": edit_portion,
                                                     "rent_amount": edit_rent,
                                                     "water_charge": edit_water,
@@ -515,6 +523,7 @@ def render_tenant_form():
                                     - Phone: {tenant.get('phone', 'N/A')}
                                     - Email: {tenant.get('email', 'N/A') or 'N/A'}
                                     - Aadhar: {tenant.get('aadhar_number', 'N/A') or 'N/A'}
+                                    - Address: {tenant.get('address', 'N/A') or 'N/A'}
 
                                     **Rent Breakdown**
                                     - Base Rent: Rs. {tenant.get('rent_amount', 0):,.0f}
@@ -565,6 +574,232 @@ def render_tenant_form():
                                             st.error(f"Error: {str(e)}")
             else:
                 st.info("No tenants found. Add your first tenant using the 'Add Tenant' tab.")
+
+        except requests.exceptions.ConnectionError:
+            st.error("Cannot connect to backend API. Please ensure the server is running.")
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+
+    else:  # Generate Agreement tab
+        st.subheader("Generate Rental Agreement")
+
+        st.markdown("""
+        Generate a rental agreement document from template. The system will automatically fill in:
+        - Owner and Tenant details
+        - Rent breakdown (Base rent, Water, Maintenance)
+        - Agreement dates and duration
+        - Advance amount
+        """)
+
+        # Fetch all tenants for selection
+        try:
+            all_tenants = fetch_tenants(token, API_BASE_URL, None, None, client_id)
+            all_buildings = fetch_all_buildings(token, API_BASE_URL, client_id)
+            building_names = {b['building_id']: b.get('building_name', 'N/A') for b in all_buildings}
+            building_types = {b['building_id']: b.get('building_type', 'Residence') for b in all_buildings}
+
+            if not all_tenants:
+                st.warning("No tenants found. Please add tenants first.")
+            else:
+                # Create tenant selection dropdown
+                tenant_options = {}
+                for t in all_tenants:
+                    building_name = building_names.get(t.get('building_id'), 'N/A')
+                    display = f"{t['name']} | {building_name} - {t.get('portion_number', 'N/A')}"
+                    tenant_options[display] = t
+
+                selected_tenant_display = st.selectbox(
+                    "Select Tenant",
+                    options=list(tenant_options.keys()),
+                    key="agreement_tenant_select"
+                )
+
+                if selected_tenant_display:
+                    selected_tenant = tenant_options[selected_tenant_display]
+                    tenant_id = selected_tenant.get('tenant_id')
+
+                    # Fetch preview data
+                    try:
+                        preview_response = requests.get(
+                            f"{API_BASE_URL}/api/files/agreement-preview/{tenant_id}",
+                            headers=headers,
+                            timeout=10
+                        )
+
+                        if preview_response.status_code == 200:
+                            preview_data = preview_response.json()
+
+                            # Display preview in columns
+                            col1, col2 = st.columns(2)
+
+                            with col1:
+                                st.markdown("**Owner Details**")
+                                owner_data = preview_data.get('owner', {})
+                                stored_owner_aadhar = owner_data.get('aadhar_number', '') or ''
+                                st.markdown(f"""
+                                - **Name:** {owner_data.get('name', 'N/A')}
+                                - **Phone:** {owner_data.get('phone', 'N/A')}
+                                - **Aadhar:** {stored_owner_aadhar or 'Not provided'}
+                                - **Address:** {owner_data.get('address', 'N/A') or 'Not provided'}
+                                """)
+
+                                st.markdown("**Rent Details**")
+                                rent_data = preview_data.get('rent', {})
+                                st.markdown(f"""
+                                - **Base Rent:** Rs. {rent_data.get('base_rent', 0):,.0f}
+                                - **Water Charge:** Rs. {rent_data.get('water_charge', 0):,.0f}
+                                - **Maintenance:** Rs. {rent_data.get('maintenance_charge', 0):,.0f}
+                                - **Total Rent:** Rs. {rent_data.get('total_rent', 0):,.0f}
+                                - **Advance:** Rs. {rent_data.get('advance_amount', 0):,.0f}
+                                - **Due Date:** {rent_data.get('rent_due_date', 1)}th of each month
+                                """)
+
+                            with col2:
+                                st.markdown("**Tenant Details**")
+                                tenant_data = preview_data.get('tenant', {})
+                                stored_tenant_address = tenant_data.get('address', '') or ''
+                                st.markdown(f"""
+                                - **Name:** {tenant_data.get('name', 'N/A')}
+                                - **Phone:** {tenant_data.get('phone', 'N/A')}
+                                - **Aadhar:** {tenant_data.get('aadhar_number', 'N/A') or 'Not provided'}
+                                - **Address:** {stored_tenant_address or 'Not provided'}
+                                - **Portion:** {tenant_data.get('portion_number', 'N/A')}
+                                """)
+
+                                st.markdown("**Agreement Details**")
+                                agreement_data = preview_data.get('agreement', {})
+                                building_data = preview_data.get('building', {})
+                                st.markdown(f"""
+                                - **Building:** {building_data.get('name', 'N/A')}
+                                - **Type:** {building_data.get('type', 'N/A')}
+                                - **Start Date:** {agreement_data.get('start_date', 'N/A')}
+                                - **End Date:** {agreement_data.get('end_date', 'N/A')}
+                                - **Duration:** {agreement_data.get('duration', 'N/A')}
+                                """)
+
+                            st.divider()
+
+                            # Check if additional info is needed
+                            needs_owner_aadhar = not stored_owner_aadhar
+                            needs_tenant_address = not stored_tenant_address
+                            needs_additional_info = needs_owner_aadhar or needs_tenant_address
+
+                            # Only show form if missing required fields
+                            if needs_additional_info:
+                                st.markdown("**Additional Information Required**")
+
+                                with st.form("generate_agreement_form"):
+                                    owner_aadhar = ""
+                                    tenant_address = ""
+
+                                    if needs_owner_aadhar:
+                                        owner_aadhar = st.text_input(
+                                            "Owner's Aadhar Number *",
+                                            placeholder="Enter 12-digit Aadhar number",
+                                            max_chars=12
+                                        )
+
+                                    if needs_tenant_address:
+                                        tenant_address = st.text_area(
+                                            "Tenant's Permanent Address *",
+                                            placeholder="Enter tenant's permanent/native address"
+                                        )
+
+                                    generate_btn = st.form_submit_button("Generate Agreement", use_container_width=True, type="primary")
+
+                                    if generate_btn:
+                                        # Validate only the missing fields
+                                        if needs_owner_aadhar and (not owner_aadhar or len(owner_aadhar) != 12):
+                                            st.error("Please enter a valid 12-digit Aadhar number for the owner")
+                                        elif needs_tenant_address and (not tenant_address or len(tenant_address.strip()) < 10):
+                                            st.error("Please enter a valid address for the tenant (at least 10 characters)")
+                                        else:
+                                            try:
+                                                params = {}
+                                                if owner_aadhar:
+                                                    params["owner_aadhar"] = owner_aadhar
+                                                if tenant_address:
+                                                    params["tenant_address"] = tenant_address.strip()
+
+                                                response = requests.post(
+                                                    f"{API_BASE_URL}/api/files/generate-agreement/{tenant_id}",
+                                                    params=params,
+                                                    headers=headers,
+                                                    timeout=30
+                                                )
+
+                                                if response.status_code == 200:
+                                                    content_disposition = response.headers.get('content-disposition', '')
+                                                    if 'filename=' in content_disposition:
+                                                        filename = content_disposition.split('filename=')[1].strip('"')
+                                                    else:
+                                                        filename = f"agreement_{tenant_id}.docx"
+
+                                                    st.session_state['generated_agreement'] = {
+                                                        'content': response.content,
+                                                        'filename': filename,
+                                                        'tenant_id': tenant_id
+                                                    }
+                                                    st.success("Agreement generated successfully! Click the download button below.")
+                                                else:
+                                                    error_msg = response.json().get('detail', 'Failed to generate agreement')
+                                                    st.error(f"Error: {error_msg}")
+
+                                            except requests.exceptions.ConnectionError:
+                                                st.error("Cannot connect to backend API.")
+                                            except Exception as e:
+                                                st.error(f"An error occurred: {str(e)}")
+                            else:
+                                # All required fields are present - just show generate button
+                                if st.button("Generate Agreement", use_container_width=True, type="primary", key="generate_btn_direct"):
+                                    try:
+                                        response = requests.post(
+                                            f"{API_BASE_URL}/api/files/generate-agreement/{tenant_id}",
+                                            params={},
+                                            headers=headers,
+                                            timeout=30
+                                        )
+
+                                        if response.status_code == 200:
+                                            content_disposition = response.headers.get('content-disposition', '')
+                                            if 'filename=' in content_disposition:
+                                                filename = content_disposition.split('filename=')[1].strip('"')
+                                            else:
+                                                filename = f"agreement_{tenant_id}.docx"
+
+                                            st.session_state['generated_agreement'] = {
+                                                'content': response.content,
+                                                'filename': filename,
+                                                'tenant_id': tenant_id
+                                            }
+                                            st.success("Agreement generated successfully! Click the download button below.")
+                                        else:
+                                            error_msg = response.json().get('detail', 'Failed to generate agreement')
+                                            st.error(f"Error: {error_msg}")
+
+                                    except requests.exceptions.ConnectionError:
+                                        st.error("Cannot connect to backend API.")
+                                    except Exception as e:
+                                        st.error(f"An error occurred: {str(e)}")
+
+                            # Download button outside the form
+                            if 'generated_agreement' in st.session_state and st.session_state['generated_agreement'].get('tenant_id') == tenant_id:
+                                agreement_data = st.session_state['generated_agreement']
+                                st.download_button(
+                                    label="Download Agreement (.docx)",
+                                    data=agreement_data['content'],
+                                    file_name=agreement_data['filename'],
+                                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                                    use_container_width=True
+                                )
+
+                        else:
+                            st.error("Failed to load tenant preview data")
+
+                    except requests.exceptions.ConnectionError:
+                        st.error("Cannot connect to backend API.")
+                    except Exception as e:
+                        st.error(f"Error loading preview: {str(e)}")
 
         except requests.exceptions.ConnectionError:
             st.error("Cannot connect to backend API. Please ensure the server is running.")

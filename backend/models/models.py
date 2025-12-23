@@ -43,6 +43,7 @@ class Owner(Base):
     phone = Column(String(20), nullable=False, index=True)
     email = Column(String(255), nullable=False, index=True)
     address = Column(Text)
+    aadhar_number = Column(String(12))
     created_at = Column(TIMESTAMP, server_default=func.now())
     updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
 
@@ -76,6 +77,7 @@ class Tenant(Base):
     name = Column(String(255), nullable=False)
     phone = Column(String(20), nullable=False)
     email = Column(String(255), index=True)
+    address = Column(Text)
     portion_number = Column(String(50), nullable=False)
     # Separated rent components
     rent_amount = Column(Numeric(10, 2), nullable=False, default=0)  # Base rent

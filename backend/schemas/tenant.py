@@ -7,6 +7,7 @@ class TenantBase(BaseModel):
     name: str
     phone: str
     email: Optional[EmailStr] = None
+    address: Optional[str] = None
     portion_number: str
     rent_amount: float = 0
     water_charge: float = 0
@@ -29,6 +30,7 @@ class TenantUpdate(BaseModel):
     name: Optional[str] = None
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
+    address: Optional[str] = None
     portion_number: Optional[str] = None
     rent_amount: Optional[float] = None
     water_charge: Optional[float] = None

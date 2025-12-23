@@ -8,6 +8,7 @@ class OwnerBase(BaseModel):
     phone: str
     email: EmailStr
     address: Optional[str] = None
+    aadhar_number: Optional[str] = None
 
 
 class OwnerCreate(OwnerBase):
@@ -19,6 +20,7 @@ class OwnerUpdate(BaseModel):
     phone: Optional[str] = None
     email: Optional[EmailStr] = None
     address: Optional[str] = None
+    aadhar_number: Optional[str] = None
 
 
 class OwnerResponse(OwnerBase):

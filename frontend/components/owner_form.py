@@ -97,6 +97,7 @@ def render_owner_form():
             name = st.text_input("Owner Name *", placeholder="Enter owner name")
             phone = st.text_input("Phone Number *", placeholder="Enter phone number")
             email = st.text_input("Email *", placeholder="Enter email address")
+            aadhar_number = st.text_input("Aadhar Number", placeholder="Enter 12-digit Aadhar number", max_chars=12)
             address = st.text_area("Address", placeholder="Enter address")
 
             submitted = st.form_submit_button("Add Owner", use_container_width=True)
@@ -104,12 +105,15 @@ def render_owner_form():
             if submitted:
                 if not name or not phone or not email:
                     st.error("Please fill in all required fields (*)")
+                elif aadhar_number and len(aadhar_number) != 12:
+                    st.error("Aadhar number must be exactly 12 digits")
                 else:
                     try:
                         data = {
                             "name": name,
                             "phone": phone,
                             "email": email,
+                            "aadhar_number": aadhar_number if aadhar_number else None,
                             "address": address if address else None
                         }
                         response = requests.post(f"{API_BASE_URL}/api/owners/", json=data, headers=headers)
@@ -172,6 +176,7 @@ def render_owner_form():
                                 edit_name = st.text_input("Name", value=owner.get('name', ''), key=f"edit_name_{owner_id}")
                                 edit_phone = st.text_input("Phone", value=owner.get('phone', ''), key=f"edit_phone_{owner_id}")
                                 edit_email = st.text_input("Email", value=owner.get('email', ''), key=f"edit_email_{owner_id}")
+                                edit_aadhar = st.text_input("Aadhar Number", value=owner.get('aadhar_number', '') or '', max_chars=12, key=f"edit_aadhar_{owner_id}")
                                 edit_address = st.text_area("Address", value=owner.get('address', '') or '', key=f"edit_address_{owner_id}")
 
                                 col1, col2 = st.columns(2)
@@ -186,6 +191,7 @@ def render_owner_form():
                                             "name": edit_name,
                                             "phone": edit_phone,
                                             "email": edit_email,
+                                            "aadhar_number": edit_aadhar if edit_aadhar else None,
                                             "address": edit_address if edit_address else None
                                         }
                                         update_resp = requests.put(f"{API_BASE_URL}/api/owners/{owner_id}", json=update_data, headers=headers)
@@ -212,6 +218,7 @@ def render_owner_form():
                                 |-------|-------|
                                 | **Phone** | {owner.get('phone', 'N/A')} |
                                 | **Email** | {owner.get('email', 'N/A')} |
+                                | **Aadhar** | {owner.get('aadhar_number', 'N/A') or 'N/A'} |
                                 | **Address** | {owner.get('address', 'N/A') or 'N/A'} |
                                 | **Owner ID** | {owner_id} |
                                 | **Buildings** | {building_count} |
