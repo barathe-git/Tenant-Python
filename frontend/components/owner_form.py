@@ -3,17 +3,17 @@ import requests
 from frontend.components.auth import get_api_url, get_auth_headers, get_current_client_id
 
 
-def get_headers_tuple():
-    """Get headers as tuple for caching"""
-    headers = get_auth_headers()
-    return tuple(sorted(headers.items())) if headers else ()
+def get_token():
+    """Get just the token for cache key"""
+    return st.session_state.get('access_token', '')
 
 
 # Cached API calls - longer TTL for better performance
-@st.cache_data(ttl=300)
-def fetch_owners(_headers_tuple, api_url, search_term=None, client_id=None):
+# Using token as cache key instead of full headers tuple for more reliable caching
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_owners(token, api_url, search_term=None, client_id=None):
     """Fetch owners with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 100}
     if search_term:
         params["search"] = search_term
@@ -23,10 +23,10 @@ def fetch_owners(_headers_tuple, api_url, search_term=None, client_id=None):
     return response.json() if response.status_code == 200 else []
 
 
-@st.cache_data(ttl=300)
-def fetch_all_buildings(_headers_tuple, api_url, client_id=None):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_all_buildings(token, api_url, client_id=None):
     """Fetch all buildings at once"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 1000}
     if client_id:
         params["client_id"] = client_id
@@ -34,10 +34,10 @@ def fetch_all_buildings(_headers_tuple, api_url, client_id=None):
     return response.json() if response.status_code == 200 else []
 
 
-@st.cache_data(ttl=300)
-def fetch_all_tenants(_headers_tuple, api_url, client_id=None):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_all_tenants(token, api_url, client_id=None):
     """Fetch all tenants at once"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 1000}
     if client_id:
         params["client_id"] = client_id
@@ -54,11 +54,25 @@ def clear_owner_cache():
 
 def render_owner_form():
     """Render owner management form"""
-    st.title("👤 Owner Management")
+    st.title("Owner Management")
+
+    # Custom CSS for modern styling
+    st.markdown("""
+    <style>
+        .streamlit-expanderHeader {
+            background: #f8fafc !important;
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
+        }
+        .streamlit-expanderHeader:hover {
+            background: #f1f5f9 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
 
     API_BASE_URL = get_api_url()
     headers = get_auth_headers()
-    headers_tuple = get_headers_tuple()
+    token = get_token()
     client_id = get_current_client_id()
 
     # Initialize tab state
@@ -121,7 +135,7 @@ def render_owner_form():
         search_term = st.text_input("Search owners", placeholder="Search by name, email, or phone", key="owner_search")
 
         try:
-            owners = fetch_owners(headers_tuple, API_BASE_URL, search_term if search_term else None, client_id)
+            owners = fetch_owners(token, API_BASE_URL, search_term if search_term else None, client_id)
 
             if owners:
                 # Summary stats
@@ -129,8 +143,8 @@ def render_owner_form():
                 st.divider()
 
                 # Batch fetch all buildings and tenants (2 API calls instead of 2*N)
-                all_buildings = fetch_all_buildings(headers_tuple, API_BASE_URL, client_id)
-                all_tenants = fetch_all_tenants(headers_tuple, API_BASE_URL, client_id)
+                all_buildings = fetch_all_buildings(token, API_BASE_URL, client_id)
+                all_tenants = fetch_all_tenants(token, API_BASE_URL, client_id)
 
                 # Pre-compute counts per owner
                 owner_stats = {}

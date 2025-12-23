@@ -5,16 +5,15 @@ import plotly.graph_objects as go
 from frontend.components.auth import get_api_url, get_auth_headers, get_current_client_id
 
 
-def get_headers_tuple():
-    """Get headers as tuple for caching"""
-    headers = get_auth_headers()
-    return tuple(sorted(headers.items())) if headers else ()
+def get_token():
+    """Get just the token for cache key"""
+    return st.session_state.get('access_token', '')
 
 
-@st.cache_data(ttl=120)
-def fetch_dashboard_stats(_headers_tuple, api_url, client_id=None):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_dashboard_stats(token, api_url, client_id=None):
     """Fetch dashboard stats with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {}
     if client_id:
         params["client_id"] = client_id
@@ -28,27 +27,65 @@ def render_dashboard():
 
     try:
         API_BASE_URL = get_api_url()
-        headers_tuple = get_headers_tuple()
+        token = get_token()
         client_id = get_current_client_id()
-        stats = fetch_dashboard_stats(headers_tuple, API_BASE_URL, client_id)
+        stats = fetch_dashboard_stats(token, API_BASE_URL, client_id)
 
         if stats:
-            # Display metrics in columns
-            col1, col2, col3, col4 = st.columns(4)
+            # Modern metric cards with icons
+            total_owners = stats.get("total_owners", 0)
+            total_buildings = stats.get("total_buildings", 0)
+            total_tenants = stats.get("total_tenants", 0)
+            expiring = stats.get("expiring_agreements", 0)
 
-            with col1:
-                st.metric(label="Total Owners", value=stats.get("total_owners", 0))
-
-            with col2:
-                st.metric(label="Total Buildings", value=stats.get("total_buildings", 0))
-
-            with col3:
-                st.metric(label="Total Tenants", value=stats.get("total_tenants", 0))
-
-            with col4:
-                st.metric(label="Expiring Soon", value=stats.get("expiring_agreements", 0))
-
-            st.divider()
+            st.markdown(f"""
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                <div style="background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+                            border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0; font-weight: 500;">Total Owners</p>
+                            <p style="color: white; font-size: 32px; margin: 8px 0 0; font-weight: 700;">{total_owners}</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 48px; height: 48px;
+                                    display: flex; align-items: center; justify-content: center; font-size: 24px;">👤</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #0ea5e9 0%, #06b6d4 100%);
+                            border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0; font-weight: 500;">Total Buildings</p>
+                            <p style="color: white; font-size: 32px; margin: 8px 0 0; font-weight: 700;">{total_buildings}</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 48px; height: 48px;
+                                    display: flex; align-items: center; justify-content: center; font-size: 24px;">🏢</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                            border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0; font-weight: 500;">Total Tenants</p>
+                            <p style="color: white; font-size: 32px; margin: 8px 0 0; font-weight: 700;">{total_tenants}</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 48px; height: 48px;
+                                    display: flex; align-items: center; justify-content: center; font-size: 24px;">🏠</div>
+                    </div>
+                </div>
+                <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+                            border-radius: 16px; padding: 24px; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <p style="color: rgba(255,255,255,0.8); font-size: 13px; margin: 0; font-weight: 500;">Expiring Soon</p>
+                            <p style="color: white; font-size: 32px; margin: 8px 0 0; font-weight: 700;">{expiring}</p>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.2); border-radius: 12px; width: 48px; height: 48px;
+                                    display: flex; align-items: center; justify-content: center; font-size: 24px;">⏰</div>
+                    </div>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
 
             # Charts Section
             col_chart1, col_chart2 = st.columns(2)

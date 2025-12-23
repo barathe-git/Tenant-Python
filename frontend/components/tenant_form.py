@@ -9,17 +9,17 @@ def get_headers():
     return get_auth_headers()
 
 
-def get_headers_tuple():
-    """Get headers as tuple for caching"""
-    headers = get_auth_headers()
-    return tuple(sorted(headers.items())) if headers else ()
+def get_token():
+    """Get just the token for cache key"""
+    return st.session_state.get('access_token', '')
 
 
 # Cached API calls to prevent repeated requests - longer TTL for better performance
-@st.cache_data(ttl=300)
-def fetch_owners(_headers_tuple, api_url, client_id=None):
+# Using token as cache key instead of full headers tuple for more reliable caching
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_owners(token, api_url, client_id=None):
     """Fetch owners with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 1000}
     if client_id:
         params["client_id"] = client_id
@@ -27,18 +27,18 @@ def fetch_owners(_headers_tuple, api_url, client_id=None):
     return response.json() if response.status_code == 200 else []
 
 
-@st.cache_data(ttl=300)
-def fetch_buildings_for_owner(_headers_tuple, api_url, owner_id):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_buildings_for_owner(token, api_url, owner_id):
     """Fetch buildings for a specific owner with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     response = requests.get(f"{api_url}/api/buildings/owner/{owner_id}", headers=headers, timeout=10)
     return response.json() if response.status_code == 200 else []
 
 
-@st.cache_data(ttl=120)
-def fetch_tenants(_headers_tuple, api_url, search_term=None, owner_id=None, client_id=None):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_tenants(token, api_url, search_term=None, owner_id=None, client_id=None):
     """Fetch tenants with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 1000}
     if search_term:
         params["search"] = search_term
@@ -50,18 +50,18 @@ def fetch_tenants(_headers_tuple, api_url, search_term=None, owner_id=None, clie
     return response.json() if response.status_code == 200 else []
 
 
-@st.cache_data(ttl=300)
-def fetch_building(_headers_tuple, api_url, building_id):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_building(token, api_url, building_id):
     """Fetch a single building with caching"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     response = requests.get(f"{api_url}/api/buildings/{building_id}", headers=headers, timeout=10)
     return response.json() if response.status_code == 200 else None
 
 
-@st.cache_data(ttl=300)
-def fetch_all_buildings(_headers_tuple, api_url, client_id=None):
+@st.cache_data(ttl=300, show_spinner=False)
+def fetch_all_buildings(token, api_url, client_id=None):
     """Fetch all buildings at once for batch lookup"""
-    headers = dict(_headers_tuple) if _headers_tuple else {}
+    headers = {"Authorization": f"Bearer {token}"} if token else {}
     params = {"limit": 1000}
     if client_id:
         params["client_id"] = client_id
@@ -80,16 +80,44 @@ def clear_tenant_cache():
 
 def render_tenant_form():
     """Render tenant management form"""
-    st.title("🏠 Tenant Management")
+    st.title("Tenant Management")
+
+    # Custom CSS for modern styling
+    st.markdown("""
+    <style>
+        /* Modern expander styling */
+        .streamlit-expanderHeader {
+            background: #f8fafc !important;
+            border-radius: 10px !important;
+            border: 1px solid #e2e8f0 !important;
+            font-weight: 500 !important;
+        }
+        .streamlit-expanderHeader:hover {
+            background: #f1f5f9 !important;
+            border-color: #cbd5e1 !important;
+        }
+        /* Status indicator dots */
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-active { background: #22c55e; }
+        .status-warning { background: #f59e0b; }
+        .status-danger { background: #ef4444; }
+    </style>
+    """, unsafe_allow_html=True)
 
     API_BASE_URL = get_api_url()
     headers = get_headers()
-    headers_tuple = get_headers_tuple()
+    token = get_token()
     client_id = get_current_client_id()
 
     # Fetch owners with caching
     try:
-        owners = fetch_owners(headers_tuple, API_BASE_URL, client_id)
+        owners = fetch_owners(token, API_BASE_URL, client_id)
 
         if not owners:
             st.warning("Please add at least one owner before adding tenants.")
@@ -130,7 +158,7 @@ def render_tenant_form():
         owner_id = owner_dict[selected_owner_display]
 
         # Fetch buildings for selected owner with caching
-        buildings = fetch_buildings_for_owner(headers_tuple, API_BASE_URL, owner_id)
+        buildings = fetch_buildings_for_owner(token, API_BASE_URL, owner_id)
         building_dict = {}
 
         if buildings:
@@ -291,7 +319,7 @@ def render_tenant_form():
         try:
             # Use cached tenant fetch
             owner_id_filter = owner_dict[filter_owner] if filter_owner != "All" else None
-            tenants = fetch_tenants(headers_tuple, API_BASE_URL, search_term if search_term else None, owner_id_filter, client_id)
+            tenants = fetch_tenants(token, API_BASE_URL, search_term if search_term else None, owner_id_filter, client_id)
 
             # Filter by status (client-side)
             filtered_tenants = []
@@ -322,177 +350,219 @@ def render_tenant_form():
                 expiring_count = sum(1 for t in tenants if 0 <= (date.fromisoformat(t.get('agreement_end_date', '2000-01-01')) - date.today()).days <= 30)
                 expired_count = sum(1 for t in tenants if (date.fromisoformat(t.get('agreement_end_date', '2000-01-01')) - date.today()).days < 0)
 
-                col1, col2, col3, col4 = st.columns(4)
-                col1.metric("Total Tenants", len(tenants))
-                col2.metric("Monthly Rent", f"Rs.{total_rent:,.0f}")
-                # col3.metric("Total Advance", f"Rs.{total_advance:,.0f}")
-                col3.metric("Expiring Soon", expiring_count)
-                col4.metric("Expired", expired_count)
-
-                st.divider()
+                # Modern stats cards
+                st.markdown(f"""
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px;">
+                    <div style="background: white; border-radius: 12px; padding: 20px;
+                                border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="color: #6b7280; font-size: 13px; margin: 0; font-weight: 500;">Total Tenants</p>
+                        <p style="color: #111827; font-size: 28px; margin: 8px 0 0; font-weight: 700;">{len(tenants)}</p>
+                    </div>
+                    <div style="background: white; border-radius: 12px; padding: 20px;
+                                border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="color: #6b7280; font-size: 13px; margin: 0; font-weight: 500;">Monthly Revenue</p>
+                        <p style="color: #059669; font-size: 28px; margin: 8px 0 0; font-weight: 700;">Rs.{total_rent:,.0f}</p>
+                    </div>
+                    <div style="background: white; border-radius: 12px; padding: 20px;
+                                border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="color: #6b7280; font-size: 13px; margin: 0; font-weight: 500;">Expiring Soon</p>
+                        <p style="color: #f59e0b; font-size: 28px; margin: 8px 0 0; font-weight: 700;">{expiring_count}</p>
+                    </div>
+                    <div style="background: white; border-radius: 12px; padding: 20px;
+                                border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <p style="color: #6b7280; font-size: 13px; margin: 0; font-weight: 500;">Expired</p>
+                        <p style="color: #ef4444; font-size: 28px; margin: 8px 0 0; font-weight: 700;">{expired_count}</p>
+                    </div>
+                </div>
+                """, unsafe_allow_html=True)
 
                 # Pre-fetch all buildings at once (single API call)
-                all_buildings = fetch_all_buildings(headers_tuple, API_BASE_URL, client_id)
+                all_buildings = fetch_all_buildings(token, API_BASE_URL, client_id)
                 building_names = {b['building_id']: b.get('building_name', 'N/A') for b in all_buildings}
 
+                # Group tenants by building
+                tenants_by_building = {}
                 for tenant in tenants:
-                    tenant_id = tenant.get('tenant_id')
                     building_id = tenant.get('building_id')
+                    if building_id not in tenants_by_building:
+                        tenants_by_building[building_id] = []
+                    tenants_by_building[building_id].append(tenant)
+
+                # Sort buildings by name for consistent display
+                sorted_building_ids = sorted(tenants_by_building.keys(), key=lambda bid: building_names.get(bid, 'N/A'))
+
+                for building_id in sorted_building_ids:
                     building_name = building_names.get(building_id, 'N/A')
-                    owner_name = owner_id_to_name.get(tenant.get('owner_id'), 'N/A')
+                    building_tenants = tenants_by_building[building_id]
+                    tenant_count = len(building_tenants)
+                    building_rent = sum(t.get('total_rent', t.get('rent_amount', 0)) for t in building_tenants)
 
-                    # Calculate days until expiry
-                    try:
-                        end_date = date.fromisoformat(tenant.get('agreement_end_date', ''))
-                        days_remaining = (end_date - date.today()).days
-                        if days_remaining < 0:
-                            status = "Expired"
-                            status_icon = "🔴"
-                        elif days_remaining <= 30:
-                            status = f"{days_remaining} days left"
-                            status_icon = "🟡"
-                        else:
-                            status = f"{days_remaining} days left"
-                            status_icon = "🟢"
-                    except:
-                        status = "N/A"
-                        status_icon = ""
+                    # Modern building header card - single line
+                    st.markdown(f"""
+                    <div style="background: #1e293b; border-radius: 10px; padding: 14px 20px; margin: 20px 0 10px 0;">
+                        <span style="color: white; font-size: 15px; font-weight: 600;">{building_name}</span>
+                        <span style="color: #94a3b8; font-size: 14px; margin-left: 12px;">
+                            {tenant_count} tenant{'s' if tenant_count > 1 else ''} &bull; Rs. {building_rent:,.0f}/month
+                        </span>
+                    </div>
+                    """, unsafe_allow_html=True)
 
-                    total_monthly = tenant.get('total_rent', tenant.get('rent_amount', 0))
-                    with st.expander(f"{status_icon} {tenant.get('name', 'N/A')} | {building_name} | Portion: {tenant.get('portion_number', 'N/A')} | Rs.{total_monthly:,.0f}/mo"):
-                        edit_key = f"edit_tenant_{tenant_id}"
+                    for tenant in building_tenants:
+                        tenant_id = tenant.get('tenant_id')
+                        owner_name = owner_id_to_name.get(tenant.get('owner_id'), 'N/A')
 
-                        if st.session_state.get(edit_key, False):
-                            # Edit mode
-                            with st.form(f"edit_tenant_form_{tenant_id}"):
-                                st.markdown("**Edit Tenant Details**")
+                        # Calculate days until expiry
+                        try:
+                            end_date = date.fromisoformat(tenant.get('agreement_end_date', ''))
+                            days_remaining = (end_date - date.today()).days
+                            if days_remaining < 0:
+                                status = "Expired"
+                                status_icon = "🔴"
+                            elif days_remaining <= 30:
+                                status = f"{days_remaining} days left"
+                                status_icon = "🟡"
+                            else:
+                                status = f"{days_remaining} days left"
+                                status_icon = "🟢"
+                        except:
+                            status = "N/A"
+                            status_icon = ""
 
-                                col1, col2 = st.columns(2)
+                        total_monthly = tenant.get('total_rent', tenant.get('rent_amount', 0))
+                        with st.expander(f"{status_icon} {tenant.get('name', 'N/A')} | Portion: {tenant.get('portion_number', 'N/A')} | Rs.{total_monthly:,.0f}/mo"):
+                            edit_key = f"edit_tenant_{tenant_id}"
+
+                            if st.session_state.get(edit_key, False):
+                                # Edit mode
+                                with st.form(f"edit_tenant_form_{tenant_id}"):
+                                    st.markdown("**Edit Tenant Details**")
+
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        edit_name = st.text_input("Name", value=tenant.get('name', ''), key=f"edit_tname_{tenant_id}")
+                                        edit_phone = st.text_input("Phone", value=tenant.get('phone', ''), key=f"edit_tphone_{tenant_id}")
+                                        edit_portion = st.text_input("Portion", value=tenant.get('portion_number', ''), key=f"edit_tportion_{tenant_id}")
+                                    with col2:
+                                        edit_email = st.text_input("Email", value=tenant.get('email', '') or '', key=f"edit_temail_{tenant_id}")
+                                        edit_aadhar = st.text_input("Aadhar", value=tenant.get('aadhar_number', '') or '', key=f"edit_taadhar_{tenant_id}")
+
+                                    st.markdown("**Rent Details**")
+                                    col1, col2, col3, col4, col5 = st.columns(5)
+                                    with col1:
+                                        edit_rent = st.number_input("Base Rent", min_value=0.0, value=float(tenant.get('rent_amount', 0)), key=f"edit_trent_{tenant_id}")
+                                    with col2:
+                                        edit_water = st.number_input("Water", min_value=0.0, value=float(tenant.get('water_charge', 0)), key=f"edit_twater_{tenant_id}")
+                                    with col3:
+                                        edit_maintenance = st.number_input("Maintenance", min_value=0.0, value=float(tenant.get('maintenance_charge', 0)), key=f"edit_tmaint_{tenant_id}")
+                                    with col4:
+                                        edit_advance = st.number_input("Advance", min_value=0.0, value=float(tenant.get('advance_amount', 0)), key=f"edit_tadvance_{tenant_id}")
+                                    with col5:
+                                        edit_due_date = st.number_input("Due Date", min_value=1, max_value=28, value=int(tenant.get('rent_due_date', 1)), key=f"edit_tdue_{tenant_id}")
+
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        edit_start = st.date_input("Start Date", value=date.fromisoformat(tenant.get('agreement_start_date', date.today().isoformat())), key=f"edit_tstart_{tenant_id}")
+                                    with col2:
+                                        edit_end = st.date_input("End Date", value=date.fromisoformat(tenant.get('agreement_end_date', date.today().isoformat())), key=f"edit_tend_{tenant_id}")
+
+                                    col1, col2 = st.columns(2)
+                                    with col1:
+                                        save_btn = st.form_submit_button("Save Changes", use_container_width=True)
+                                    with col2:
+                                        cancel_btn = st.form_submit_button("Cancel", use_container_width=True)
+
+                                    if save_btn:
+                                        if edit_start >= edit_end:
+                                            st.error("End date must be after start date")
+                                        else:
+                                            try:
+                                                update_data = {
+                                                    "name": edit_name,
+                                                    "phone": edit_phone,
+                                                    "email": edit_email if edit_email else None,
+                                                    "portion_number": edit_portion,
+                                                    "rent_amount": edit_rent,
+                                                    "water_charge": edit_water,
+                                                    "maintenance_charge": edit_maintenance,
+                                                    "advance_amount": edit_advance,
+                                                    "rent_due_date": int(edit_due_date),
+                                                    "aadhar_number": edit_aadhar if edit_aadhar else None,
+                                                    "agreement_start_date": edit_start.isoformat(),
+                                                    "agreement_end_date": edit_end.isoformat()
+                                                }
+                                                update_resp = requests.put(f"{API_BASE_URL}/api/tenants/{tenant_id}", json=update_data, headers=headers)
+                                                if update_resp.status_code == 200:
+                                                    st.success("Tenant updated successfully!")
+                                                    st.session_state[edit_key] = False
+                                                    clear_tenant_cache()
+                                                    st.rerun()
+                                                else:
+                                                    st.error(f"Failed to update: {update_resp.json().get('detail', 'Unknown error')}")
+                                            except Exception as e:
+                                                st.error(f"Error: {str(e)}")
+
+                                    if cancel_btn:
+                                        st.session_state[edit_key] = False
+                                        st.rerun()
+                            else:
+                                # View mode
+                                col1, col2, col3 = st.columns([2, 2, 1])
+
                                 with col1:
-                                    edit_name = st.text_input("Name", value=tenant.get('name', ''), key=f"edit_tname_{tenant_id}")
-                                    edit_phone = st.text_input("Phone", value=tenant.get('phone', ''), key=f"edit_tphone_{tenant_id}")
-                                    edit_portion = st.text_input("Portion", value=tenant.get('portion_number', ''), key=f"edit_tportion_{tenant_id}")
-                                with col2:
-                                    edit_email = st.text_input("Email", value=tenant.get('email', '') or '', key=f"edit_temail_{tenant_id}")
-                                    edit_aadhar = st.text_input("Aadhar", value=tenant.get('aadhar_number', '') or '', key=f"edit_taadhar_{tenant_id}")
+                                    due_day = tenant.get('rent_due_date', 1)
+                                    st.markdown(f"""
+                                    **Contact Information**
+                                    - Phone: {tenant.get('phone', 'N/A')}
+                                    - Email: {tenant.get('email', 'N/A') or 'N/A'}
+                                    - Aadhar: {tenant.get('aadhar_number', 'N/A') or 'N/A'}
 
-                                st.markdown("**Rent Details**")
-                                col1, col2, col3, col4, col5 = st.columns(5)
-                                with col1:
-                                    edit_rent = st.number_input("Base Rent", min_value=0.0, value=float(tenant.get('rent_amount', 0)), key=f"edit_trent_{tenant_id}")
+                                    **Rent Breakdown**
+                                    - Base Rent: Rs. {tenant.get('rent_amount', 0):,.0f}
+                                    - Water: Rs. {tenant.get('water_charge', 0):,.0f}
+                                    - Maintenance: Rs. {tenant.get('maintenance_charge', 0):,.0f}
+                                    - **Total: Rs. {total_monthly:,.0f}**
+                                    - Advance: Rs. {tenant.get('advance_amount', 0):,.0f}
+                                    - Due Date: {due_day}th of each month
+                                    """)
+
                                 with col2:
-                                    edit_water = st.number_input("Water", min_value=0.0, value=float(tenant.get('water_charge', 0)), key=f"edit_twater_{tenant_id}")
+                                    st.markdown(f"""
+                                    **Agreement Details**
+                                    - Owner: {owner_name}
+                                    - Start: {tenant.get('agreement_start_date', 'N/A')}
+                                    - End: {tenant.get('agreement_end_date', 'N/A')}
+                                    - Status: {status}
+                                    """)
+
                                 with col3:
-                                    edit_maintenance = st.number_input("Maintenance", min_value=0.0, value=float(tenant.get('maintenance_charge', 0)), key=f"edit_tmaint_{tenant_id}")
-                                with col4:
-                                    edit_advance = st.number_input("Advance", min_value=0.0, value=float(tenant.get('advance_amount', 0)), key=f"edit_tadvance_{tenant_id}")
-                                with col5:
-                                    edit_due_date = st.number_input("Due Date", min_value=1, max_value=28, value=int(tenant.get('rent_due_date', 1)), key=f"edit_tdue_{tenant_id}")
+                                    if st.button("Edit", key=f"edit_btn_t_{tenant_id}", use_container_width=True):
+                                        st.session_state[edit_key] = True
+                                        st.session_state['tenant_active_tab'] = "Manage Tenants"
+                                        st.rerun()
 
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    edit_start = st.date_input("Start Date", value=date.fromisoformat(tenant.get('agreement_start_date', date.today().isoformat())), key=f"edit_tstart_{tenant_id}")
-                                with col2:
-                                    edit_end = st.date_input("End Date", value=date.fromisoformat(tenant.get('agreement_end_date', date.today().isoformat())), key=f"edit_tend_{tenant_id}")
+                                    if tenant.get('agreement_pdf_path'):
+                                        if st.button("Agreement", key=f"view_pdf_{tenant_id}", use_container_width=True):
+                                            st.session_state['view_pdf_tenant_id'] = tenant_id
+                                            st.session_state['view_pdf_type'] = 'agreement'
+                                            st.rerun()
 
-                                col1, col2 = st.columns(2)
-                                with col1:
-                                    save_btn = st.form_submit_button("Save Changes", use_container_width=True)
-                                with col2:
-                                    cancel_btn = st.form_submit_button("Cancel", use_container_width=True)
+                                    if tenant.get('aadhar_pdf_path'):
+                                        if st.button("Aadhar", key=f"view_aadhar_{tenant_id}", use_container_width=True):
+                                            st.session_state['view_pdf_tenant_id'] = tenant_id
+                                            st.session_state['view_pdf_type'] = 'aadhar'
+                                            st.rerun()
 
-                                if save_btn:
-                                    if edit_start >= edit_end:
-                                        st.error("End date must be after start date")
-                                    else:
+                                    if st.button("Delete", key=f"delete_tenant_{tenant_id}", type="primary", use_container_width=True):
                                         try:
-                                            update_data = {
-                                                "name": edit_name,
-                                                "phone": edit_phone,
-                                                "email": edit_email if edit_email else None,
-                                                "portion_number": edit_portion,
-                                                "rent_amount": edit_rent,
-                                                "water_charge": edit_water,
-                                                "maintenance_charge": edit_maintenance,
-                                                "advance_amount": edit_advance,
-                                                "rent_due_date": int(edit_due_date),
-                                                "aadhar_number": edit_aadhar if edit_aadhar else None,
-                                                "agreement_start_date": edit_start.isoformat(),
-                                                "agreement_end_date": edit_end.isoformat()
-                                            }
-                                            update_resp = requests.put(f"{API_BASE_URL}/api/tenants/{tenant_id}", json=update_data, headers=headers)
-                                            if update_resp.status_code == 200:
-                                                st.success("Tenant updated successfully!")
-                                                st.session_state[edit_key] = False
+                                            delete_response = requests.delete(f"{API_BASE_URL}/api/tenants/{tenant_id}", headers=headers)
+                                            if delete_response.status_code == 204:
+                                                st.success("Tenant deleted successfully!")
                                                 clear_tenant_cache()
                                                 st.rerun()
                                             else:
-                                                st.error(f"Failed to update: {update_resp.json().get('detail', 'Unknown error')}")
+                                                st.error("Failed to delete tenant")
                                         except Exception as e:
                                             st.error(f"Error: {str(e)}")
-
-                                if cancel_btn:
-                                    st.session_state[edit_key] = False
-                                    st.rerun()
-                        else:
-                            # View mode
-                            col1, col2, col3 = st.columns([2, 2, 1])
-
-                            with col1:
-                                due_day = tenant.get('rent_due_date', 1)
-                                st.markdown(f"""
-                                **Contact Information**
-                                - Phone: {tenant.get('phone', 'N/A')}
-                                - Email: {tenant.get('email', 'N/A') or 'N/A'}
-                                - Aadhar: {tenant.get('aadhar_number', 'N/A') or 'N/A'}
-
-                                **Rent Breakdown**
-                                - Base Rent: Rs. {tenant.get('rent_amount', 0):,.0f}
-                                - Water: Rs. {tenant.get('water_charge', 0):,.0f}
-                                - Maintenance: Rs. {tenant.get('maintenance_charge', 0):,.0f}
-                                - **Total: Rs. {total_monthly:,.0f}**
-                                - Advance: Rs. {tenant.get('advance_amount', 0):,.0f}
-                                - Due Date: {due_day}th of each month
-                                """)
-
-                            with col2:
-                                st.markdown(f"""
-                                **Agreement Details**
-                                - Owner: {owner_name}
-                                - Start: {tenant.get('agreement_start_date', 'N/A')}
-                                - End: {tenant.get('agreement_end_date', 'N/A')}
-                                - Status: {status}
-                                """)
-
-                            with col3:
-                                if st.button("Edit", key=f"edit_btn_t_{tenant_id}", use_container_width=True):
-                                    st.session_state[edit_key] = True
-                                    st.session_state['tenant_active_tab'] = "Manage Tenants"
-                                    st.rerun()
-
-                                if tenant.get('agreement_pdf_path'):
-                                    if st.button("Agreement", key=f"view_pdf_{tenant_id}", use_container_width=True):
-                                        st.session_state['view_pdf_tenant_id'] = tenant_id
-                                        st.session_state['view_pdf_type'] = 'agreement'
-                                        st.rerun()
-
-                                if tenant.get('aadhar_pdf_path'):
-                                    if st.button("Aadhar", key=f"view_aadhar_{tenant_id}", use_container_width=True):
-                                        st.session_state['view_pdf_tenant_id'] = tenant_id
-                                        st.session_state['view_pdf_type'] = 'aadhar'
-                                        st.rerun()
-
-                                if st.button("Delete", key=f"delete_tenant_{tenant_id}", type="primary", use_container_width=True):
-                                    try:
-                                        delete_response = requests.delete(f"{API_BASE_URL}/api/tenants/{tenant_id}", headers=headers)
-                                        if delete_response.status_code == 204:
-                                            st.success("Tenant deleted successfully!")
-                                            clear_tenant_cache()
-                                            st.rerun()
-                                        else:
-                                            st.error("Failed to delete tenant")
-                                    except Exception as e:
-                                        st.error(f"Error: {str(e)}")
             else:
                 st.info("No tenants found. Add your first tenant using the 'Add Tenant' tab.")
 

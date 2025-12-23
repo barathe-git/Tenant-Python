@@ -5,10 +5,10 @@ from frontend.components.auth import get_api_url, get_auth_headers
 
 def render_settings():
     """Render settings page"""
-    st.title("⚙️ Settings")
+    st.title("Settings")
 
     # Change Password Section
-    st.subheader("🔐 Change Password")
+    st.subheader("Change Password")
 
     with st.form("change_password_form"):
         current_password = st.text_input(
@@ -61,7 +61,7 @@ def render_settings():
     st.divider()
 
     # API Configuration
-    st.subheader("🔗 API Configuration")
+    st.subheader("API Configuration")
 
     with st.form("api_settings"):
         api_url = st.text_input(
@@ -75,7 +75,7 @@ def render_settings():
             st.success("API URL updated successfully!")
 
     # Test Connection
-    st.subheader("📡 Connection Status")
+    st.subheader("Connection Status")
 
     col1, col2 = st.columns([3, 1])
     with col2:
@@ -100,7 +100,7 @@ def render_settings():
     st.divider()
 
     # Cache Management
-    st.subheader("🗑️ Cache Management")
+    st.subheader("Cache Management")
 
     st.markdown("""
     The application caches API responses to improve performance.
@@ -115,7 +115,7 @@ def render_settings():
     st.divider()
 
     # About
-    st.subheader("ℹ️ About")
+    st.subheader("About")
 
     st.markdown("""
     **Tenant Management System** v2.0.0
