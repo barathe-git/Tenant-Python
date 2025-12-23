@@ -1,0 +1,491 @@
+/* Tenant Management System - Clean Modern CSS */
+
+/* ===== GLOBAL STYLES ===== */
+* {
+    box-sizing: border-box;
+}
+
+/* Main app background */
+.stApp {
+    background: #f8fafc;
+}
+
+/* Main container */
+.main .block-container {
+    padding-top: 2rem;
+    padding-bottom: 2rem;
+    max-width: 1400px;
+}
+
+/* ===== SIDEBAR ===== */
+[data-testid="stSidebar"] {
+    background: #ffffff;
+    padding-top: 1rem;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+    padding-top: 1rem;
+}
+
+[data-testid="stSidebar"] .stSelectbox label,
+[data-testid="stSidebar"] .stTextInput label,
+[data-testid="stSidebar"] h1,
+[data-testid="stSidebar"] h2,
+[data-testid="stSidebar"] h3,
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] span {
+    color: #000000 !important;
+}
+
+[data-testid="stSidebar"] .stRadio label {
+    color: #000000 !important;
+}
+
+[data-testid="stSidebar"] .stRadio > div {
+    color: #000000 !important;
+}
+
+/* ===== METRIC CARDS ===== */
+[data-testid="stMetricValue"] {
+    font-size: 2.25rem !important;
+    font-weight: 700 !important;
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
+}
+
+[data-testid="stMetricContainer"] {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+[data-testid="stMetricLabel"] {
+    font-size: 0.875rem !important;
+    font-weight: 600 !important;
+    color: #64748b !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===== CARDS ===== */
+.card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.card h4 {
+    color: #1e293b;
+    margin: 0 0 0.5rem 0;
+    font-weight: 600;
+}
+
+.card p {
+    color: #475569;
+    margin: 0;
+}
+
+/* ===== FORM STYLING ===== */
+.stForm {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    margin: 1rem 0;
+}
+
+/* Form input styling - text inputs, number inputs, text areas */
+.stTextInput > div > div > input,
+.stDateInput > div > div > input,
+.stNumberInput > div > div > input,
+.stTextArea > div > div > textarea {
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    padding: 0.5rem 0.75rem;
+    font-size: 1rem !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    color: #1e293b !important;
+    background-color: white !important;
+}
+
+/* Selectbox container styling */
+.stSelectbox > div > div {
+    border-radius: 8px !important;
+}
+
+/* Selectbox selected value text */
+.stSelectbox [data-baseweb="select"] > div {
+    font-size: 1rem !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    color: #1e293b !important;
+    background-color: white !important;
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+}
+
+/* Selectbox dropdown options */
+.stSelectbox [data-baseweb="select"] span {
+    font-size: 1rem !important;
+    color: #1e293b !important;
+}
+
+/* Input labels */
+.stTextInput label,
+.stSelectbox label,
+.stDateInput label,
+.stNumberInput label,
+.stTextArea label,
+.stFileUploader label {
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    color: #374151 !important;
+    margin-bottom: 0.25rem !important;
+}
+
+/* Number input specific */
+.stNumberInput > div > div > input {
+    font-size: 1rem !important;
+}
+
+/* Text area */
+.stTextArea > div > div > textarea {
+    font-size: 1rem !important;
+    line-height: 1.5 !important;
+}
+
+/* Placeholder text */
+.stTextInput > div > div > input::placeholder,
+.stTextArea > div > div > textarea::placeholder {
+    color: #9ca3af !important;
+    font-size: 0.95rem !important;
+}
+
+/* Focus states */
+.stTextInput > div > div > input:focus,
+.stDateInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus,
+.stTextArea > div > div > textarea:focus {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2) !important;
+}
+
+/* Selectbox focus state */
+.stSelectbox [data-baseweb="select"] > div:focus-within {
+    border-color: #4f46e5 !important;
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2) !important;
+}
+
+/* ===== BUTTONS ===== */
+.stButton > button {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 0.625rem 1.25rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.3);
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(79, 70, 229, 0.4);
+}
+
+.stButton > button:active {
+    transform: translateY(0);
+}
+
+/* Primary/Delete buttons */
+.stButton > button[kind="primary"] {
+    background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.3);
+}
+
+.stButton > button[kind="primary"]:hover {
+    box-shadow: 0 4px 8px rgba(220, 38, 38, 0.4);
+}
+
+/* ===== TABLES ===== */
+.stDataFrame {
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+/* ===== ALERT BOXES ===== */
+.alert-box {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 0.75rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #3b82f6;
+}
+
+.alert-box.danger {
+    border-left-color: #ef4444;
+    background: #fef2f2;
+}
+
+.alert-box.warning {
+    border-left-color: #f59e0b;
+    background: #fffbeb;
+}
+
+.alert-box.info {
+    border-left-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.alert-box strong {
+    color: #1e293b;
+}
+
+.alert-box small {
+    color: #64748b;
+}
+
+/* ===== HEADERS ===== */
+h1 {
+    color: #1e293b !important;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    font-size: 2rem;
+    -webkit-text-fill-color: #1e293b !important;
+}
+
+h2 {
+    color: #334155 !important;
+    font-weight: 600;
+    margin-top: 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 1.5rem;
+}
+
+h3 {
+    color: #475569 !important;
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+/* ===== EXPANDERS ===== */
+.stExpander {
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    margin: 0.5rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.stExpander:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Expander header */
+.stExpander > details > summary {
+    padding: 0.75rem 1rem;
+    font-weight: 500;
+    color: #1e293b;
+}
+
+/* ===== TABS ===== */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 4px;
+    background-color: #f1f5f9;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    border-radius: 8px;
+    padding: 0.5rem 1rem;
+    font-weight: 500;
+    color: #475569;
+}
+
+.stTabs [aria-selected="true"] {
+    background: white !important;
+    color: #4f46e5 !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* ===== INFO/SUCCESS/ERROR MESSAGES ===== */
+.stInfo, .stSuccess, .stError, .stWarning {
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    margin: 0.75rem 0;
+    border: none;
+}
+
+/* ===== DIVIDERS ===== */
+hr {
+    border: none;
+    height: 1px;
+    background: #e2e8f0;
+    margin: 1.5rem 0;
+}
+
+/* ===== COLUMNS ===== */
+[data-testid="column"] {
+    padding: 0.5rem;
+}
+
+/* ===== PLOTLY CHARTS ===== */
+.js-plotly-plot {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.stPlotlyChart {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+/* ===== FILE UPLOADER ===== */
+.stFileUploader {
+    background: white;
+    border-radius: 10px;
+    border: 2px dashed #d1d5db;
+    padding: 1rem;
+}
+
+.stFileUploader:hover {
+    border-color: #4f46e5;
+}
+
+/* ===== SELECTBOX ===== */
+.stSelectbox > div > div {
+    background: white;
+    border-radius: 8px;
+}
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+    .main .block-container {
+        padding: 1rem;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    h2 {
+        font-size: 1.25rem;
+    }
+}
+
+/* ===== STAT CARD CONTAINER ===== */
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+.stat-card .icon {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-card .value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.stat-card .label {
+    font-size: 0.875rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ===== CHART CONTAINERS ===== */
+.chart-container {
+    background: white;
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin: 1rem 0;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+}
+
+/* ===== OCCUPANCY CARD ===== */
+.occupancy-card {
+    background: white;
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    margin: 0.5rem 0;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.occupancy-card .building-name {
+    font-weight: 600;
+    color: #1e293b;
+}
+
+.occupancy-card .occupancy-info {
+    color: #64748b;
+    font-size: 0.9rem;
+}
+
+.occupancy-card .occupancy-rate {
+    font-weight: 700;
+    color: #4f46e5;
+    font-size: 1.25rem;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-bar {
+    background: #e2e8f0;
+    border-radius: 4px;
+    height: 8px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-bar .fill {
+    background: linear-gradient(90deg, #4f46e5 0%, #7c3aed 100%);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
